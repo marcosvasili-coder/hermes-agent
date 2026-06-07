@@ -1,0 +1,26 @@
+---
+description: Repo-specific self-learning — update rules, skills, and Codex learnings after tasks
+alwaysApply: true
+---
+
+# Self-learning (this repo only)
+
+Learnings stay **in this repository** — not in global Cursor/Claude/Codex config. Global files are for personal style only.
+
+## After completing a task
+
+1. **Repeated explanation** already covered elsewhere → add or extend `.cursor/rules/[domain].mdc` (with `description` frontmatter) or `.claude/skills/<name>/SKILL.md`.
+2. **Clarifying question answerable from code** → add one line to the nearest domain rule or `CLAUDE.md` `# Self-Maintenance`.
+3. **Better pattern found** → update the relevant rule/skill; note what changed in the PR or commit message.
+4. **Rule caused a mistake** → add a `REVIEW:` comment in that rule for the human, or flag in `.claude/weekly-review.md`.
+5. **Codex review pasted** (approve / changes-needed) → distill durable bullets into `AGENTS.md` **## Review learnings** (marker `setup-ai-context-codex-learnings v1`). Skip one-off nits; keep side effects, invariants, protected paths.
+
+## Do not learn into (script-owned — edit `scripts/repo-init.sh` master instead)
+
+- `cursor-agent-cli-workflow.mdc`, `runner.mdc`, `git-workflow.mdc`
+
+## Codex is not autonomous
+
+Codex reads **`AGENTS.md`** at repo root. You maintain **## Review learnings** so `codex review` gets smarter over time. Weekly cron also refreshes that section from drift scans.
+
+<!-- setup-ai-context-self-improvement v1 -->

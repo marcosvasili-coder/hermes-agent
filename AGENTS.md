@@ -66,6 +66,14 @@ hermes-agent/
 `gateway.log` when running the gateway. Profile-aware via `get_hermes_home()`.
 Browse with `hermes logs [--follow] [--level ...] [--session ...]`.
 
+**Operational policy — `--replace` during active kanban swarms:** see the
+module docstring at `gateway/run.py` top. TL;DR: `--replace` is safe for the
+kanban DB itself (post-2026-05-22 F3/F5/F6 hardening keeps WAL clean across
+SIGTERM) but is discouraged during an active swarm because it orphans
+in-flight worker subprocesses. Prefer `launchctl kickstart -k` during quiet
+windows; backup the board DB before any pre-planned restart that overlaps
+with kanban work.
+
 ## File Dependency Chain
 
 ```
@@ -1130,3 +1138,20 @@ not the specific names.
 
 Reviewers should reject new change-detector tests; authors should convert
 them into invariants before re-requesting review.
+
+
+## Codex (review-only)
+
+- **Role:** read-only `codex review`; you do not commit, push, or edit files.
+- **Read first:** `CLAUDE.md` autonomy constraints and this file **## Review learnings**.
+- **Typical scope:** side effects (`gh api`, `git push`, `rm -rf`, LaunchAgent writes), protected paths, exit codes, idempotency.
+- **Commands:** `bash ~/actions-runners/bin/run-codex-review.sh "$PWD" --vs-main` (vs integration branch) or `bash ~/actions-runners/bin/run-codex-review.sh "$PWD" --uncommitted` (working tree) — logged gate. **Claude Code:** run from session after commit (network; disable sandbox if blocked). **Codex 0.137+:** no custom prompt with `--base`/`--uncommitted` — standing focus in **## Review learnings**; bare `codex review --uncommitted` or `--base main` only.
+- **Output:** bullet verdict — approve / changes-needed; human pastes into Cursor Agents for fixes.
+
+## Review learnings (repo-specific, auto-maintained)
+
+Durable patterns for **this repo** worth checking on every review. Weekly maintenance and agents append here after Codex feedback or incidents. Keep one line per bullet; max ~25. Do not duplicate full `CLAUDE.md`.
+
+- (none yet — weekly maintenance and post-review agent tasks populate this section)
+
+<!-- setup-ai-context-codex-learnings v1 -->
