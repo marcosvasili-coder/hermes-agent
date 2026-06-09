@@ -1,0 +1,10 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash(git commit*)",
+        "command": "command -v ruff >/dev/null 2>&1 && ruff check . || true"
+      }
+    ]
+  }
+}
