@@ -649,8 +649,34 @@ def write_profile_meta(
 # CRUD operations
 # ---------------------------------------------------------------------------
 
-def list_profiles() -> List[ProfileInfo]:
-    """Return info for all profiles, including the default."""
+def _desktop_visible_profile_names() -> Optional[set[str]]:
+    """Optional allowlist from ``~/.hermes/desktop.json`` for the desktop UI."""
+    from hermes_constants import _get_platform_default_hermes_home
+
+    path = _get_platform_default_hermes_home() / "desktop.json"
+    if not path.is_file():
+        return None
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None
+    if not isinstance(data, dict):
+        return None
+    raw = data.get("visible_profiles")
+    if not isinstance(raw, list) or not raw:
+        return None
+    names = {str(item).strip() for item in raw if str(item).strip()}
+    return names or None
+
+
+def list_profiles(visible_only: bool = False) -> List[ProfileInfo]:
+    """Return info for all profiles, including the default.
+
+    ``visible_only`` is a presentation-layer opt-in: when True, the result is
+    filtered to the desktop ``visible_profiles`` allowlist (if configured).
+    Callers that resolve assignees, enumerate gateways, or otherwise need the
+    full set of profiles must leave it False (the default).
+    """
     profiles = []
     wrapper_dir = _get_wrapper_dir()
 
@@ -713,6 +739,11 @@ def list_profiles() -> List[ProfileInfo]:
                 description=meta.get("description", ""),
                 description_auto=meta.get("description_auto", False),
             ))
+
+    if visible_only:
+        visible = _desktop_visible_profile_names()
+        if visible is not None:
+            profiles = [profile for profile in profiles if profile.name in visible]
 
     return profiles
 

@@ -11,9 +11,9 @@ import pytest
 from hermes_cli.plugins import PluginContext, PluginManager, PluginManifest
 from gateway.config import GatewayConfig, Platform, PlatformConfig
 from plugins.teams_pipeline import register
-from plugins.teams_pipeline.pipeline import TeamsMeetingPipeline
+from plugins.teams_pipeline.pipeline import TeamsMeetingPipeline, TeamsPipelineConfig
 from plugins.teams_pipeline.store import TeamsPipelineStore
-from plugins.teams_pipeline.models import MeetingArtifact
+from plugins.teams_pipeline.models import MeetingArtifact, TeamsMeetingPipelineJob
 
 
 class FakeGraphClient:
@@ -465,3 +465,122 @@ class TestTeamsMeetingPipeline:
         assert len(store.list_jobs()) == 1
         receipt_key = TeamsPipelineStore.build_notification_receipt_key(notification)
         assert store.has_notification_receipt(receipt_key) is True
+
+
+# ---------------------------------------------------------------------------
+# on_job_completed hook
+# ---------------------------------------------------------------------------
+
+def test_config_parses_on_job_completed_script_both_cases():
+    snake = TeamsPipelineConfig.from_dict({"on_job_completed_script": "  /tmp/hook.py  "})
+    camel = TeamsPipelineConfig.from_dict({"onJobCompletedScript": "/tmp/hook.py"})
+    absent = TeamsPipelineConfig.from_dict({})
+
+    assert snake.on_job_completed_script == "/tmp/hook.py"  # stripped
+    assert camel.on_job_completed_script == "/tmp/hook.py"
+    assert absent.on_job_completed_script is None
+
+
+def _completed_job(job_id: str = "teams-job-hook-1") -> TeamsMeetingPipelineJob:
+    return TeamsMeetingPipelineJob.from_dict(
+        {
+            "job_id": job_id,
+            "event_id": "evt-1",
+            "source_event_type": "updated",
+            "dedupe_key": "evt-1",
+            "status": "completed",
+        }
+    )
+
+
+def _pipeline(tmp_path, **config) -> TeamsMeetingPipeline:
+    return TeamsMeetingPipeline(
+        graph_client=FakeGraphClient(),
+        store=TeamsPipelineStore(tmp_path / "teams-store.json"),
+        config=config,
+    )
+
+
+# The hook delegates to ``asyncio.to_thread``, so it is asyncio-bound by
+# design (the Teams pipeline only ever runs under asyncio). These tests drive
+# the coroutine with ``asyncio.run`` directly rather than the anyio dual-backend
+# marker, which would also exercise an unsupported trio backend.
+
+def test_on_job_completed_hook_invokes_configured_script(tmp_path, monkeypatch):
+    import subprocess
+
+    script = tmp_path / "hook.py"
+    script.write_text("import sys\n")
+    calls = []
+    monkeypatch.setattr(subprocess, "run", lambda *a, **k: calls.append((a, k)))
+
+    pipeline = _pipeline(tmp_path, on_job_completed_script=str(script))
+    job = _completed_job()
+    asyncio.run(pipeline._invoke_on_job_completed_hook(job))
+
+    assert len(calls) == 1
+    argv = calls[0][0][0]
+    assert argv[-2:] == [str(script), job.job_id]
+    assert calls[0][1]["timeout"] == 120
+    assert calls[0][1]["check"] is False
+
+
+def test_on_job_completed_hook_env_overrides_config(tmp_path, monkeypatch):
+    import subprocess
+
+    env_script = tmp_path / "env-hook.py"
+    env_script.write_text("import sys\n")
+    cfg_script = tmp_path / "cfg-hook.py"
+    cfg_script.write_text("import sys\n")
+    monkeypatch.setenv("HERMES_TEAMS_ON_JOB_COMPLETED", str(env_script))
+    calls = []
+    monkeypatch.setattr(subprocess, "run", lambda *a, **k: calls.append((a, k)))
+
+    pipeline = _pipeline(tmp_path, on_job_completed_script=str(cfg_script))
+    asyncio.run(pipeline._invoke_on_job_completed_hook(_completed_job()))
+
+    assert calls[0][0][0][-2] == str(env_script)
+
+
+def test_on_job_completed_hook_noop_when_unconfigured(tmp_path, monkeypatch):
+    import subprocess
+
+    monkeypatch.delenv("HERMES_TEAMS_ON_JOB_COMPLETED", raising=False)
+
+    def _boom(*a, **k):
+        raise AssertionError("subprocess.run should not be called")
+
+    monkeypatch.setattr(subprocess, "run", _boom)
+
+    pipeline = _pipeline(tmp_path)
+    asyncio.run(pipeline._invoke_on_job_completed_hook(_completed_job()))
+
+
+def test_on_job_completed_hook_noop_when_script_missing(tmp_path, monkeypatch):
+    import subprocess
+
+    monkeypatch.delenv("HERMES_TEAMS_ON_JOB_COMPLETED", raising=False)
+
+    def _boom(*a, **k):
+        raise AssertionError("subprocess.run should not be called")
+
+    monkeypatch.setattr(subprocess, "run", _boom)
+
+    pipeline = _pipeline(tmp_path, on_job_completed_script=str(tmp_path / "nope.py"))
+    asyncio.run(pipeline._invoke_on_job_completed_hook(_completed_job()))
+
+
+def test_on_job_completed_hook_swallows_subprocess_errors(tmp_path, monkeypatch):
+    import subprocess
+
+    script = tmp_path / "hook.py"
+    script.write_text("import sys\n")
+
+    def _raise(*a, **k):
+        raise subprocess.TimeoutExpired(cmd="x", timeout=120)
+
+    monkeypatch.setattr(subprocess, "run", _raise)
+
+    pipeline = _pipeline(tmp_path, on_job_completed_script=str(script))
+    # Best-effort: a failing hook must not raise into the pipeline.
+    asyncio.run(pipeline._invoke_on_job_completed_hook(_completed_job()))

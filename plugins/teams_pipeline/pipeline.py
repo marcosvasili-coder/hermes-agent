@@ -85,11 +85,13 @@ class TeamsPipelineConfig:
     notion: dict[str, Any] | None = None
     linear: dict[str, Any] | None = None
     teams_delivery: dict[str, Any] | None = None
+    on_job_completed_script: str | None = None
 
     @classmethod
     def from_dict(cls, payload: Optional[dict[str, Any]]) -> "TeamsPipelineConfig":
         data = dict(payload or {})
         tmp_dir = data.get("tmp_dir") or data.get("tmpDir")
+        script = data.get("on_job_completed_script") or data.get("onJobCompletedScript")
         return cls(
             transcript_preferred=bool(data.get("transcript_preferred", True)),
             transcript_required=bool(data.get("transcript_required", False)),
@@ -101,6 +103,7 @@ class TeamsPipelineConfig:
             notion=data.get("notion"),
             linear=data.get("linear"),
             teams_delivery=data.get("teams_delivery") or data.get("teamsDelivery"),
+            on_job_completed_script=str(script).strip() if script else None,
         )
 
 
@@ -408,6 +411,7 @@ class TeamsMeetingPipeline:
 
             await self._write_sinks(job, summary_payload)
             job = self._persist_job(job, status="completed")
+            await self._invoke_on_job_completed_hook(job)
             return job
         except TeamsPipelineRetryableError as exc:
             job = self._persist_job(
@@ -446,6 +450,34 @@ class TeamsMeetingPipeline:
         payload.update(updates)
         stored = self.store.upsert_job(job.job_id, payload)
         return TeamsMeetingPipelineJob.from_dict(stored)
+
+    async def _invoke_on_job_completed_hook(self, job: TeamsMeetingPipelineJob) -> None:
+        """Run optional profile script after a successful pipeline job (best-effort)."""
+        script_path = (
+            os.environ.get("HERMES_TEAMS_ON_JOB_COMPLETED", "").strip()
+            or (self.config.on_job_completed_script or "")
+        )
+        if not script_path:
+            return
+        path = Path(script_path).expanduser()
+        if not path.is_file():
+            logger.debug("Teams on_job_completed script not found: %s", path)
+            return
+
+        def _run() -> None:
+            import subprocess
+
+            try:
+                subprocess.run(
+                    [os.environ.get("HERMES_PYTHON", "python3"), str(path), job.job_id],
+                    timeout=120,
+                    check=False,
+                    env=os.environ.copy(),
+                )
+            except Exception as exc:
+                logger.warning("Teams on_job_completed hook failed: %s", exc)
+
+        await asyncio.to_thread(_run)
 
     async def _transcribe_recording(
         self,

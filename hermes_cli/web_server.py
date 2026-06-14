@@ -1878,7 +1878,7 @@ async def get_profiles_sessions(
         targets.append((name, home))
     else:
         try:
-            infos = profiles_mod.list_profiles()
+            infos = profiles_mod.list_profiles(visible_only=True)
             targets = [(info.name, info.path) for info in infos]
         except Exception:
             _log.exception("GET /api/profiles/sessions: list_profiles failed")
@@ -5715,7 +5715,7 @@ def _cron_profile_dicts() -> List[Dict[str, Any]]:
     """Return dashboard profile records, falling back to a directory scan."""
     from hermes_cli import profiles as profiles_mod
     try:
-        return [_profile_to_dict(p) for p in profiles_mod.list_profiles()]
+        return [_profile_to_dict(p) for p in profiles_mod.list_profiles(visible_only=True)]
     except Exception:
         _log.exception("Failed to list profiles for cron dashboard; falling back to directory scan")
         return _fallback_profile_dicts(profiles_mod)
@@ -7489,7 +7489,7 @@ def _write_profile_model(profile_dir: Path, provider: str, model: str) -> None:
 async def list_profiles_endpoint():
     from hermes_cli import profiles as profiles_mod
     try:
-        return {"profiles": [_profile_to_dict(p) for p in profiles_mod.list_profiles()]}
+        return {"profiles": [_profile_to_dict(p) for p in profiles_mod.list_profiles(visible_only=True)]}
     except Exception:
         _log.exception("GET /api/profiles failed; falling back to profile directory scan")
         return {"profiles": _fallback_profile_dicts(profiles_mod)}
