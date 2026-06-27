@@ -4,6 +4,33 @@
       {
         "matcher": "Bash(git commit*)",
         "command": "command -v ruff >/dev/null 2>&1 && ruff check . || true"
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "INPUT=${CLAUDE_TOOL_INPUT:-}; if echo \"$INPUT\" | grep -qiE 'gh workflow|git push|act |workflow_dispatch'; then   STATUS=$(pgrep -f 'Runner.Listener' > /dev/null 2>&1 && echo online || echo offline);   if [ \"$STATUS\" = 'offline' ]; then     echo 'WARNING: Self-hosted runner is OFFLINE.';     echo 'Start it first: cd /Users/marcosvasili/actions-runners/hermes-agent && ./run.sh';   fi; fi || true"
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "# GIT_GUARD\nINPUT=\"${CLAUDE_TOOL_INPUT:-}\"; BLOCK=0; MSG=''; if echo \"$INPUT\" | grep -qE 'git push.*--force(\\s|$)' && ! echo \"$INPUT\" | grep -q 'force-with-lease'; then BLOCK=1; MSG='BLOCKED: git push --force forbidden. Use --force-with-lease.'; fi; if echo \"$INPUT\" | grep -qE 'git push.*--force.*\\b(main|master)\\b'; then BLOCK=1; MSG='BLOCKED: force-push to main/master never allowed.'; fi; if echo \"$INPUT\" | grep -qE 'git reset --hard' && git rev-parse --abbrev-ref HEAD 2>/dev/null | grep -qE '^(main|master)$'; then BLOCK=1; MSG='BLOCKED: git reset --hard on main/master. Switch branches first.'; fi; if echo \"$INPUT\" | grep -qE 'git tag -d|git tag.*-f'; then BLOCK=1; MSG='BLOCKED: tag deletion or force-update. Confirm with developer first.'; fi; if [ \"$BLOCK\" -eq 1 ]; then echo \"$MSG\"; exit 1; fi; exit 0"
+          }
+        ]
+      },
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "# PROTECTED_FILES_GUARD\nINPUT=\"${CLAUDE_TOOL_INPUT:-}\"; if echo \"$INPUT\" | grep -qE '\"file_path\"[^,}]*(\\.env([\"/]|$)|/\\.env\"|cli-config\\.yaml\"|uv\\.lock\"|package-lock\\.json\"|flake\\.lock\"|\\.p12\"|\\.mobileprovision\"|\\.credentials)'; then echo 'BLOCKED: protected file (env/lockfile/credential/cli-config). Edit the .example, regenerate the lockfile, or confirm with the developer first.'; exit 1; fi; exit 0"
+          }
+        ]
       }
     ]
   }

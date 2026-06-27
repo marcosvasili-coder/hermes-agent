@@ -123,3 +123,15 @@ scripts/out/
 # stores the published notes. They are not a build artifact and must never be
 # committed to the repo root. See the hermes-release skill.
 RELEASE_v*.md
+
+# AI-context setup artifacts (local-only, never committed)
+CLAUDE.local.md
+.claude/setup-log.txt
+.claude/crosscheck-report.md
+.claude/weekly-review.md
+.claude/cursor-stage2-prompt.txt
+.claude/weekly-maintenance.sh
+
+# Private personal data and local PR scratch — never committed
+.ermes-vault/
+.pr-drafts/
