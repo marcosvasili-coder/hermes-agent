@@ -56,7 +56,7 @@ Keep wording aligned with `.cursor/rules/cursor-agent-cli-workflow.mdc` and `~/.
 - **Always run `scripts/run_tests.sh` before committing** — never `pytest` directly (CI parity, credential isolation, hermetic per-file subprocesses; see AGENTS.md Testing).
 - **Code review gate:** every non-trivial change passes a strict pre-commit review (Codex-style) before commit. Route through `/code-review`, resolve all HOLDs first. Enforce all-or-nothing per-row gating on imports + atomic transactions on the first pass, not as a retrofit.
 - **Response style:** keep responses concise. Split long output (diffs, logs, plans) across messages and pause for "continue" — never dump a wall of output.
-- **Git push:** the agent never pushes — this is a policy rule, not a hook-enforced block (the `GIT_GUARD` hook only blocks `--force` / `reset --hard` on main / tag deletion). Stage + commit, then give the user the exact `git push origin <branch>` to run.
+- **Git push:** may run when the user asks or when completing ship/PR. Use the correct remote (`fork` vs `origin`). `GIT_GUARD` still blocks `--force` / `reset --hard` on main / tag deletion.
 - **Plan-then-build:** don't implement until the user confirms; finish and save the plan file before any code change.
 - **Conventions inferred from the code:** exact-pin every direct Python dep (`==X.Y.Z`, no ranges) and regenerate `uv.lock` on bump (supply-chain blast radius); always pass explicit `encoding=` to `open()`/`read_text()`/`write_text()` (PLW1514 — Windows cp1252 corruption); put provider-specific deps in extras + lazy-install via `tools/lazy_deps.py`, not core `dependencies`; match the repo's heavy "why" comments on non-obvious pins/config.
 
@@ -76,7 +76,7 @@ When you discover a pattern, gotcha, or convention that would help future work i
 ## Claude Insights Applied — 2026-06-10
 - **Code Review / Quality Gates** — Codex-style pre-commit gate (caught S1 dedup-key + import-gating bugs before merge).
 - **Response Style** — chunking rule (8+ sessions lost to output token-limit errors).
-- **Git** — documented the agent-never-pushes policy (recurring blocked-push friction).
+- **Git** — documented git push policy (claude-auto allowed, bare claude ask-first) (recurring blocked-push friction).
 - **Workflow** — plan-before-implement gate (premature starts + lost plan files).
 - **Skills** — `.claude/skills/gated-ship/SKILL.md` encodes the design→implement→review→commit cycle.
 - **Hooks** — `.claude/settings.json` carries a pre-commit ruff lint hook.

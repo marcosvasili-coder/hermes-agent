@@ -13,7 +13,7 @@ metadata:
 
 # Gated Ship Skill
 
-Runs the full design→verify→implement→review→commit cycle with a human gate before push. Never attempts `git push` — by policy the agent never pushes; it stops and prints the exact command instead.
+Runs the full design→verify→implement→review→commit→push cycle. In `claude-auto`, push when the user asks or when completing ship/PR. Bare `claude`: ask before push. Never force-push to `main`.
 
 ## When to Use
 
@@ -38,7 +38,7 @@ Invoke `/gated-ship` (or describe the task). Claude will walk through the cycle 
 | Review | `/code-review` APPROVE | Any open HOLD |
 | Diff approval | User confirms staged diff | User reject |
 | Commit | clean commit | — |
-| Push | **USER runs manually** | agent never pushes (policy) |
+| Push | **`claude-auto` may push** when asked or ship/PR complete | bare `claude` asks first |
 
 ## Procedure
 
@@ -49,13 +49,13 @@ Invoke `/gated-ship` (or describe the task). Claude will walk through the cycle 
 5. Run `/code-review`. Parse every HOLD into a tracked task; fix each one; re-run until APPROVE with tests still green.
 6. Run `git diff --staged` and present it to the user. Wait for explicit approval before committing.
 7. Commit with a clear, descriptive message.
-8. **Stop.** Print: `git push origin <branch>` — never run it yourself.
+8. **Push.** In `claude-auto`: `git push` to the correct remote when the user asked or ship/PR is complete. In bare `claude`: print `git push <remote> <branch>` and ask, or push if the user explicitly requested.
 
 ## Pitfalls
 
 - Do not commit before tests pass — a broken commit blocks the review loop.
 - Do not skip the review gate for "small" changes; HOLDs have caught real blockers in the past.
-- Do not attempt `git push` — by policy the agent never pushes; print the command for the user instead.
+- Do not force-push to `main`. Bare `claude`: ask before push unless the user explicitly requested it.
 - If the plan file is missing, write and save it first; a plan interrupted mid-write is unrecoverable.
 
 ## Verification
@@ -64,4 +64,4 @@ Invoke `/gated-ship` (or describe the task). Claude will walk through the cycle 
 - `/code-review` returned APPROVE with no open HOLDs
 - User confirmed the staged diff
 - Commit exists locally
-- Push command printed to user; push not yet run
+- Push completed in `claude-auto` when appropriate, or command printed in bare `claude`

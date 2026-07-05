@@ -37,11 +37,9 @@ Imperative mood. Subject under 72 chars. One concept per commit.
 Squash merge feature branches into `main`. After merge: delete local and remote branch.
 
 ## Pushing
-**The agent never runs `git push`.** By policy it stages, commits, then prints
-`git push origin <branch>` for the user to run. This matches the `gated-ship`
-skill's push gate.
+**`claude-auto` (YOLO):** may `git push` when the user asks or when completing ship/PR workflow. Push work branches to `fork`, not `origin` (upstream). **Bare `claude`:** ask first, then push.
 
-Rules for the user-run push command:
+Push rules:
 - Push only after local tests pass
 - Never `git push --force` — use `--force-with-lease` if needed
 - Never force-push to `main` under any circumstance

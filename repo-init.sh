@@ -166,7 +166,7 @@ alwaysApply: true
 - **Before non-trivial work**, state explicitly: (1) recommended surface + one sentence why; (2) **one write driver** for this branch — Cursor **or** `claude` (not both); (3) constraints (branch, must-not-touch, verify command); (4) optional **Codex review** scope before/after edits; (5) **HANDOFF** block if switching to Claude.
 - **Codex:** suggest `bash ~/actions-runners/bin/run-codex-review.sh "$PWD" --vs-main` (or `--uncommitted`; logged gate) — raw `codex review --base main "…"` as fallback; user runs in terminal; user pastes **approve / changes-needed** here; you implement fixes.
 - **iTerm:** call out when the human should run pre-CI checks (e.g. `./scripts/check-runner-singletons.sh`) or install smoke — do not spawn Terminal.app as primary UX unless user asks.
-- Human is final decision maker on branches, commits, and pushes. Ask before creating branches, committing, or pushing.
+- Human is final decision maker on merges. `claude-auto` may push on request or ship/PR; bare `claude` asks first.
 - Keep changes small and reviewable.
 
 ## Subagents (Cursor)
@@ -625,7 +625,7 @@ EOF
 - \`.cursor/rules/cursor-agent-cli-workflow.mdc\` — Cursor / Claude / Codex / iTerm routing
 
 ## Autonomy constraints
-- Do not push, merge, or open PRs without explicit instruction
+- May push, merge, or open PRs when the user asks or when completing ship/PR; confirm before force-push or merging to main
 - Do not commit secrets or production credentials
 - Check \`CLAUDE.md\` for repo-specific do-not-touch patterns
 
@@ -2257,7 +2257,7 @@ no placeholders; use "none configured" when a command genuinely is not set up):
 (add 2–5 more lines; only files that actually exist in this repo)
 
 ## Autonomy constraints
-- Do not push, merge, or open PRs without explicit instruction
+- May push, merge, or open PRs when the user asks or when completing ship/PR; confirm before force-push or merging to main
 - Do not commit secrets or production credentials
 (add 2–4 repo-specific constraints extracted from CLAUDE.md protected
  sections, settings.json hooks, or .cursor/rules/index.mdc deny-list;
