@@ -2,8 +2,13 @@
   "hooks": {
     "PreToolUse": [
       {
-        "matcher": "Bash(git commit*)",
-        "command": "command -v ruff >/dev/null 2>&1 && ruff check . || true"
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "INPUT=\"${CLAUDE_TOOL_INPUT:-}\"; if echo \"$INPUT\" | grep -qE 'git commit'; then command -v ruff >/dev/null 2>&1 && ruff check . || true; fi"
+          }
+        ]
       },
       {
         "matcher": "Bash",
