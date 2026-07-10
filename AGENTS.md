@@ -4,6 +4,10 @@ Instructions for AI coding assistants and developers working on the hermes-agent
 
 **Never give up on the right solution.**
 
+## Codex review surfaces
+
+- **In Claude Code:** `/codex:review`. **In Cursor Agents:** `bash ~/actions-runners/bin/run-codex-review.sh "$PWD"`.
+
 ## Development Environment
 
 ```bash
