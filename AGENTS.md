@@ -1194,7 +1194,7 @@ Codex-facing lessons distilled from real sessions on this repo. Apply these duri
 - **Verify before writing.** Always validate design assumptions against live source (file:line) before generating code. A misidentified subsystem — wrong file, wrong function, wrong subsystem — wastes the entire implementation pass and requires a full restart.
 - **Review gate is mandatory.** Every implementation increment must pass Codex-style review before commit. The review step has caught load-bearing bugs (dedup-key errors, import-gating gaps, non-atomic transactions) that the test suite did not surface. "Small" changes are not exempt.
 - **All-or-nothing on first pass.** All-or-nothing per-row gating on imports and atomic transactions must be built in on the first implementation pass. Retrofitting these constraints after a review HOLD costs a full extra iteration.
-- **May run `git push`** when the user asks or when completing ship/PR. `GIT_GUARD` blocks dangerous variants only (`--force` to main, etc.).
+- **Do not push, merge, or open PRs without explicit instruction.** `GIT_GUARD` still blocks `--force`/`reset --hard` on main and tag deletion regardless.
 - **Chunk large outputs.** Single responses that exceed the output token limit wipe the entire transcript. Split diffs, logs, and plan writeouts into multiple messages and pause for "continue".
 - **Save the plan file before implementing.** A plan write interrupted mid-stream leaves no recoverable artifact. Finish and `git diff` the plan file before any code change begins.
 - **scripts/run_tests.sh, not pytest directly.** Direct `pytest` invocations diverge from CI (credentials leak in, TZ/locale differ, subprocess isolation is skipped). Always use the wrapper.
