@@ -1,0 +1,85 @@
+---
+description: Cursor Agents only — routing vs Claude Code, Codex, iTerm; handoffs, subagents.
+alwaysApply: true
+---
+
+> **Repo rule.** Same text in **User rules:** paste from `~/.cursor/USER-RULES-PASTE-FOR-CURSOR-AGENTS.md` (**Cursor → Settings → Rules**). **Canonical source:** edit **`scripts/repo-init.sh`** in the dev-dock repo (`write_cursor_agent_cli_workflow_mdc`). Then re-run **phase 2**, **`sync-copies`**, or **`scripts/fleet-sync-agent-workflow.sh`**. New repo: copy `repo-init.sh` into the repo root, run **`./repo-init.sh`** (full or at least phases **2+**).
+
+# Cursor Agents view — workflow
+
+**Scope:** These rules apply **only** in **Cursor Agent** (Agents side view / agent chat, e.g. Cmd+I). They do **not** apply to Cursor Tab, Cmd/Ctrl+K inline edit, or the terminal by themselves.
+
+**Outside this view:** Long or wide work may belong in **Claude Code** (`claude` in the terminal). **Read-only review** may belong in **Codex CLI** (`codex review` in the terminal). **Live ops** (runner start, install smoke, manual `gh`) often run in **iTerm** beside Cursor — not an autonomous agent.
+
+## What each surface is best at
+
+| Surface | Best for |
+|---------|----------|
+| **Cursor Agents** (+ subagents) | IDE-tight work (navigation, diffs, diagnostics), MCP/browser, short steering cycles, UI/layout |
+| **Claude Code CLI** (`claude` at repo root) | Long linear passes, wide refactors, long shell/git/test chains, sustained batch work |
+| **Codex CLI** (`run-codex-review.sh` / `codex review …`) | Read-only scoped review (security, side effects, script audit). Prefer the logged gate `bash ~/actions-runners/bin/run-codex-review.sh "$PWD" --vs-main`. **Paste verdict back to Cursor** — Codex does not own commits |
+| **iTerm** (human) | Runner singleton checks, `./scripts/install-app.sh`, live smoke, `gh` you want visible — **not** a fourth autonomous driver |
+
+**Rule of thumb:** IDE-shaped → Cursor. Batch-shaped → Claude. Review-before-merge → Codex → Cursor implements. Runner/CI smoke → you in iTerm.
+
+## Roles (while in Agents view)
+
+- You are the agent in **Cursor Agents view**; coordinate **Claude Code** for batch work and **Codex** for review passes.
+- **Before non-trivial work**, state explicitly: (1) recommended surface + one sentence why; (2) **one write driver** for this branch — Cursor **or** `claude` (not both); (3) constraints (branch, must-not-touch, verify command); (4) optional **Codex review** scope before/after edits; (5) **HANDOFF** block if switching to Claude.
+- **Codex:** suggest `bash ~/actions-runners/bin/run-codex-review.sh "$PWD" --vs-main` (or `--uncommitted`; logged gate) — raw `codex review --base main "…"` as fallback; user runs in terminal; user pastes **approve / changes-needed** here; you implement fixes.
+- **iTerm:** call out when the human should run pre-CI checks (e.g. `./scripts/check-runner-singletons.sh`) or install smoke — do not spawn Terminal.app as primary UX unless user asks.
+- Human is final decision maker on branches, commits, and pushes. Ask before creating branches, committing, or pushing.
+- Keep changes small and reviewable.
+
+## Subagents (Cursor)
+
+Use **subagents** for scoped side quests (read-only exploration, parallel lookups). Do **not** split **write ownership** between subagents and the main agent on the same branch without an explicit **handoff** summary.
+
+## Session bias (this chat)
+
+Use subagents to reduce thrash. If the task becomes a **long terminal-driven pass**, stop extending here — output a **HANDOFF** block for **Claude Code** instead of grinding in Agents.
+
+## One driver per branch (Cursor vs Claude)
+
+- Only **one autonomous write driver** per branch at a time: Cursor Agent **or** `claude`, not both editing the same pass. Codex is review-only. iTerm is human-only.
+- Before switching, leave a clean story (`git status` understandable, or a commit).
+- Run `claude` from the repo root (`git rev-parse --show-toplevel`). Prefer one Cursor window = one repo root aligned with that cwd.
+
+**HANDOFF block** — when switching to Claude Code, output this **filled in** for the user to paste:
+
+```
+HANDOFF — read first, then continue.
+
+Goal:
+Non-goals / do not touch:
+Branch:  (who owns this pass: Cursor vs claude)
+Already done:  (files + summary)
+Commands already run:  (with outcomes if relevant)
+Current state:  (tests/lint, open errors)
+Codex review:  (paste approve/changes-needed if any)
+Next steps:  (3–5 ordered)
+Open questions / risks:
+```
+
+## Chat and session hygiene
+
+- **One chat per task.** When done, say: "Start a new chat for the next task — cleaner context."
+- **Context degrading.** After 8+ exchanges without resolution, suggest a new chat.
+- **Wrong surface.** Terminal-driven or 5+ files → HANDOFF to Claude; review-only → Codex first.
+- **Model.** Always use Auto. Never suggest switching to a specific model.
+
+## Verification and scope
+
+- Before claiming done, run this repo’s usual checks (README, Makefile, `package.json` / `pyproject.toml`, or CI workflow). If none exist, say what you verified manually.
+- Do not expand scope: no unrelated refactors, no new dependencies, no extra files unless the user asked or required.
+- No drive-by formatting or renames outside the requested change.
+
+## Security
+
+- Never commit secrets or paste production credentials into chat. Follow existing env / secret patterns in the repo.
+
+## Subscription vs API (Claude Code)
+
+- When the user intends **Claude Max** subscription billing for the CLI, do not assume `ANTHROPIC_API_KEY` in the shell; subscription auth is separate. If a key is set and they want subscription, call it out.
+
+<!-- setup-ai-context-cursor-cli-workflow v3 -->

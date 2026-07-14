@@ -95,6 +95,14 @@ Applies to TypeScript across Hermes: desktop, TUI, website, and future TS packag
 - `src/store` owns shared atoms.
 - `src/lib` owns shared pure helpers.
 
+**Operational policy — `--replace` during active kanban swarms:** see the
+module docstring at `gateway/run.py` top. TL;DR: `--replace` is safe for the
+kanban DB itself (post-2026-05-22 F3/F5/F6 hardening keeps WAL clean across
+SIGTERM) but is discouraged during an active swarm because it orphans
+in-flight worker subprocesses. Prefer `launchctl kickstart -k` during quiet
+windows; backup the board DB before any pre-planned restart that overlaps
+with kanban work.
+
 ## File Dependency Chain
 
 ```
